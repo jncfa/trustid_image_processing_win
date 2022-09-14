@@ -66,6 +66,14 @@ namespace trustid
              */
             cv::Mat getCroppedImage() const;
 
+            /**
+             * Retuns a copy of the current FaceDetectionResultEntry with the original image cropped to save memory.
+             */
+            FaceDetectionResultEntry applyCrop() const;
+
+            /**
+             * Returns a copy of the current FaceDetectionResultEntry.
+             */
             FaceDetectionResultEntry copy() const;
 
         private:
