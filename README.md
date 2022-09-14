@@ -18,8 +18,7 @@ cmake --build .
 
 ## To-Do List
 ### Must
-- TODO: Fix the shape predictor bug (the image keeps getting scuffed in Windows, check if this also happens in Linux or not)
-- TODO: 
+- TODO: Implement 
 
 ### Should
 
