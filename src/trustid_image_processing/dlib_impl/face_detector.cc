@@ -1,5 +1,5 @@
 #include "trustid_image_processing/dlib_impl/face_detector.h"
-
+#include "trustid_image_processing/utils.h"
 
 trustid::image::impl::DlibFaceDetector::DlibFaceDetector()
 {
@@ -19,11 +19,9 @@ trustid::image::FaceDetectionResult trustid::image::impl::DlibFaceDetector::_det
     for (auto &det : dlibDetections)
     {
         FaceDetectionConfidenceBoundingBox detectResult;
-        detectResult.boundingBox = cv::Rect(det.rect.left(), det.rect.top(), det.rect.width(), det.rect.height());
+        detectResult.boundingBox = utils::dlibRectangleToOpenCV(det.rect);
         detectResult.confidenceScore = det.detection_confidence;
         faces.push_back(detectResult);
-
-        std::cout << detectResult.boundingBox.x << "|" << detectResult.boundingBox.y << "|" << detectResult.boundingBox.width << "|" << detectResult.boundingBox.height << std::endl;
     }
 
     // return the faces found

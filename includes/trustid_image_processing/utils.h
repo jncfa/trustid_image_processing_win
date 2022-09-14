@@ -2,6 +2,7 @@
 #define TRUSTID_UTILS_H_
 
 #include <opencv2/opencv.hpp>
+#include <dlib/geometry.h>
 #include "face_detector.h"
 
 namespace trustid
@@ -27,6 +28,10 @@ namespace trustid
              * Checks the image contrast of a given image.
              */
             ImageQualityResultEnum checkImageQuality(const trustid::image::FaceDetectionResultEntry detectionResultEntry);
+
+            cv::Rect dlibRectangleToOpenCV(const dlib::rectangle r);
+
+            dlib::rectangle openCVRectToDlib(const cv::Rect r);
         }
     }
 }

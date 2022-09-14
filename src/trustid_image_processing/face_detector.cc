@@ -8,7 +8,7 @@
 
 #include "trustid_image_processing/face_detector.h"
 
-trustid::image::FaceDetectionResultEntry::FaceDetectionResultEntry(cv::Mat image, trustid::image::FaceDetectionConfidenceBoundingBox detectionBoundingbox) : detectionBoundingbox(detectionBoundingbox), image(image) {}
+trustid::image::FaceDetectionResultEntry::FaceDetectionResultEntry(cv::Mat image, trustid::image::FaceDetectionConfidenceBoundingBox detectionBoundingbox) : detectionBoundingbox(detectionBoundingbox), image(image.clone()) {}
 
 cv::Mat trustid::image::FaceDetectionResultEntry::getImage() const
 {
@@ -33,14 +33,13 @@ cv::Mat trustid::image::FaceDetectionResultEntry::getCroppedImage() const
     }
     else
     {
-        std::cout << detectionBoundingbox.boundingBox.x << "|" << detectionBoundingbox.boundingBox.y << "|" << detectionBoundingbox.boundingBox.width << "|" << detectionBoundingbox.boundingBox.height << std::endl;
         return image(detectionBoundingbox.boundingBox);
     }
 }
 
 trustid::image::FaceDetectionResultEntry trustid::image::FaceDetectionResultEntry::copy() const
 {
-    return FaceDetectionResultEntry(image.clone(), detectionBoundingbox);
+    return FaceDetectionResultEntry(image, detectionBoundingbox);
 }
 
 trustid::image::FaceDetectionResult::FaceDetectionResult(cv::Mat image, std::vector<FaceDetectionConfidenceBoundingBox> boundingBoxes) : image(image), boundingBoxes(boundingBoxes)
@@ -132,6 +131,18 @@ std::vector<trustid::image::FaceDetectionConfidenceBoundingBox> trustid::image::
     return sortedBoundingBoxes;
 }
 
+std::vector<trustid::image::FaceDetectionResultEntry> trustid::image::FaceDetectionResult::getBoundingBoxEntries(BoundingBoxHeuristicEnum heuristic) const{
+    // sort data according to heuristic
+    std::vector<FaceDetectionConfidenceBoundingBox> sortedBoundingBoxes = getBoundingBoxes(heuristic);
+
+    auto entries = std::vector<FaceDetectionResultEntry>();
+    for (auto &boundingBox : sortedBoundingBoxes)
+    {
+        entries.push_back(FaceDetectionResultEntry(image, boundingBox));
+    }
+    return entries;
+}
+
 trustid::image::FaceDetectionResultEntry trustid::image::FaceDetectionResult::getEntry(int detectionIdx, BoundingBoxHeuristicEnum heuristic) const
 {
     if (detectionIdx < boundingBoxes.size())
@@ -147,7 +158,7 @@ trustid::image::FaceDetectionResultEntry trustid::image::FaceDetectionResult::ge
 
 trustid::image::FaceDetectionResult trustid::image::FaceDetectionResult::copy() const
 {
-    return FaceDetectionResult(image.clone(), boundingBoxes, resultValue);
+    return FaceDetectionResult(image, boundingBoxes, resultValue);
 }
 
 trustid::image::IFaceDetectImageProcessor::IFaceDetectImageProcessor()
@@ -169,7 +180,7 @@ trustid::image::FaceDetectionResult trustid::image::IFaceDetector::detectFaces(c
     {
         if (processor != nullptr)
         {
-            imageCopy = processor->processImage(imageCopy);
+            imageCopy = processor->operator()(imageCopy);
         }
     }
     return _detectFaces(imageCopy);

@@ -66,7 +66,7 @@ namespace trustid
             {
             public:
                 DlibFaceChipExtractor();
-                virtual FaceDetectionResultEntry processImage(const FaceDetectionResultEntry detectionResultEntry) override;
+                virtual FaceDetectionResultEntry operator() (const FaceDetectionResultEntry detectionResultEntry) override;
 
             private:
                 dlib::shape_predictor sp;

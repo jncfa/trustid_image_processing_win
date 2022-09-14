@@ -25,33 +25,22 @@ namespace trustid
         class FaceVerificationResult
         {
         public:
-            FaceVerificationResult(FaceDetectionResultEntry detectionResultEntry, double matchConfidence, FaceVerificationResultEnum resultValue) : detectionResultEntry(detectionResultEntry), matchConfidence(matchConfidence), resultValue(resultValue)
-            {
-            }
+            FaceVerificationResult(FaceDetectionResultEntry detectionResultEntry, double matchConfidence, FaceVerificationResultEnum resultValue);
 
             /**
              * Returns the confidence score of the match of the given face image to a certain user.
              */
-            double getMatchConfidence() const
-            {
-                return matchConfidence;
-            }
+            double getMatchConfidence() const;
 
             /**
              * Returns the result of the face verification operation.
              */
-            FaceVerificationResultEnum getResult() const
-            {
-                return resultValue;
-            }
+            FaceVerificationResultEnum getResult() const;
 
             /**
              * Returns the face detection result for the given face verification operation.
              */
-            FaceDetectionResultEntry getDetectionResult() const
-            {
-                return detectionResultEntry;
-            }
+            FaceDetectionResultEntry getDetectionResult() const;
 
         private:
             double matchConfidence;
@@ -65,8 +54,8 @@ namespace trustid
         class IFaceVerifyImageProcessor
         {
         public:
-            IFaceVerifyImageProcessor() {}
-            virtual FaceDetectionResultEntry processImage(const FaceDetectionResultEntry detectionResultEntry) = 0;
+            IFaceVerifyImageProcessor();
+            virtual FaceDetectionResultEntry operator() (const FaceDetectionResultEntry detectionResultEntry) = 0;
         };
 
         /**
@@ -75,23 +64,8 @@ namespace trustid
         class ResizeImageProcessor : public IFaceVerifyImageProcessor
         {
         public:
-            ResizeImageProcessor(int width, int height) : width(width), height(height) {}
-            virtual FaceDetectionResultEntry processImage(const FaceDetectionResultEntry detectionResultEntry)
-            {
-                // Resize the image to the specified size
-                cv::Mat image = detectionResultEntry.getImage();
-                cv::Mat resizedImage;
-                auto detectionBoundingBox = detectionResultEntry.getFaceDetBoundingBox();
-                cv::resize(image, resizedImage, cv::Size(width, height), 0, 0, cv::INTER_LINEAR);
-
-                // reshape bounding box
-                detectionBoundingBox.boundingBox.x = detectionBoundingBox.boundingBox.x * width / resizedImage.cols;
-                detectionBoundingBox.boundingBox.y = detectionBoundingBox.boundingBox.y * height / resizedImage.rows;
-                detectionBoundingBox.boundingBox.width = detectionBoundingBox.boundingBox.width * width / resizedImage.cols;
-                detectionBoundingBox.boundingBox.height = detectionBoundingBox.boundingBox.height * height / resizedImage.rows;
-                std::cout << detectionBoundingBox.boundingBox.x << "|" << detectionBoundingBox.boundingBox.y << detectionBoundingBox.boundingBox.width << "|" << detectionBoundingBox.boundingBox.height << std::endl;
-                return FaceDetectionResultEntry(resizedImage, detectionBoundingBox);
-            }
+            ResizeImageProcessor(int width, int height);
+            virtual FaceDetectionResultEntry operator() (const FaceDetectionResultEntry detectionResultEntry);
 
         private:
             int width;
@@ -102,21 +76,11 @@ namespace trustid
          * Class to implement a cropping mechanism for images.
          */
         class CropImageProcessor : public IFaceVerifyImageProcessor
-        { 
+        {
         public:
-            CropImageProcessor(cv::Rect cropInfo) : cropInfo(cropInfo) {}
+            CropImageProcessor(cv::Rect cropInfo);
+            virtual FaceDetectionResultEntry operator() (const FaceDetectionResultEntry detectionResultEntry) override;
 
-            virtual FaceDetectionResultEntry processImage(const FaceDetectionResultEntry detectionResultEntry) override
-            {
-                // Crop the image to the specified size
-                cv::Mat image = detectionResultEntry.getImage();
-                auto cropBoundingBox = detectionResultEntry.getFaceDetBoundingBox();
-
-                // TODO: Add a check when the crop rectangle is outside the image
-                cropBoundingBox.boundingBox = cv::Rect(cropBoundingBox.boundingBox.x - cropInfo.x, cropBoundingBox.boundingBox.y - cropInfo.y, cropBoundingBox.boundingBox.width, cropBoundingBox.boundingBox.height);
-
-                return FaceDetectionResultEntry(image(cropInfo), cropBoundingBox);
-            }
         private:
             cv::Rect cropInfo;
         };
@@ -127,40 +91,20 @@ namespace trustid
         class IFaceVerificator
         {
         public:
-            IFaceVerificator() : preprocessors()
-            {
-            }
-            IFaceVerificator(std::vector<std::unique_ptr<IFaceVerifyImageProcessor>> preprocessors) : preprocessors(std::move(preprocessors))
-            {
-            }
+            IFaceVerificator();
+            IFaceVerificator(std::vector<std::unique_ptr<IFaceVerifyImageProcessor>> preprocessors);
 
-            void addPreprocessor(std::unique_ptr<IFaceVerifyImageProcessor> preprocessor)
-            {
-                preprocessors.push_back(std::move(preprocessor));
-            }
+            void addPreprocessor(std::unique_ptr<IFaceVerifyImageProcessor> preprocessor);
 
-            void removePreprocessors()
-            {
-                preprocessors.clear();
-            }
+            void removePreprocessors();
 
             /**
              * Detects faces in an image.
              */
-            FaceVerificationResult verifyUser(const FaceDetectionResultEntry detectionResultEntry) 
-            {
-                return _verifyUser(applyProcessors(detectionResultEntry));
-            }
+            FaceVerificationResult verifyUser(const FaceDetectionResultEntry detectionResultEntry);
+
         protected:
-            FaceDetectionResultEntry applyProcessors(const FaceDetectionResultEntry detectionResultEntry) 
-            {
-                FaceDetectionResultEntry detectionResultEntryCopy = detectionResultEntry.copy();
-                for (auto &processor : preprocessors)
-                {
-                    detectionResultEntryCopy = processor->processImage(detectionResultEntryCopy);
-                }
-                return detectionResultEntryCopy;
-            }
+            FaceDetectionResultEntry applyProcessors(const FaceDetectionResultEntry detectionResultEntry);
 
         private:
             /**

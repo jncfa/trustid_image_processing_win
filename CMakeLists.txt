@@ -20,7 +20,7 @@ file(GLOB ocv_src CONFIGURE_DEPENDS "src/trustid_image_processing/opencv_impl/*.
 file(GLOB client_src CONFIGURE_DEPENDS "src/trustid_image_processing/client/*.cpp")
 file(GLOB server_src CONFIGURE_DEPENDS "src/trustid_image_processing/server/*.cpp")
 
-file(GLOB_RECURSE source_list "src/*.cc" "includes/*.h")
+file(GLOB_RECURSE source_list "src/*.cc" "includes/*.h" "includes/*.cc")
 
 # Resource files we need to add to the library
 set(RESOURCE_FILES
@@ -35,19 +35,29 @@ target_link_libraries(trustid-image-processing-lib PUBLIC dlib ${OpenCV_LIBS})
 
 add_executable(trustid-image-processing-ex-buildverifier "examples/build_simple_face_verifier.cc")
 add_executable(trustid-image-processing-ex-verifyface "examples/detect_and_verify_faces.cc")
+add_executable(shape-pred-valid "examples/shape_pred_example.cc")
 
 target_include_directories(trustid-image-processing-ex-verifyface PUBLIC "includes" ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(trustid-image-processing-ex-verifyface PUBLIC dlib trustid-image-processing-lib ${OpenCV_LIBS})
+
 target_include_directories(trustid-image-processing-ex-buildverifier PUBLIC "includes" ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(trustid-image-processing-ex-buildverifier PUBLIC dlib trustid-image-processing-lib ${OpenCV_LIBS})
 
+target_include_directories(shape-pred-valid PUBLIC "includes")
+target_link_libraries(shape-pred-valid PUBLIC dlib trustid-image-processing-lib)
 
-## Only needed for MacOSX
-#set_target_properties(ExecutableTarget PROPERTIES
-#  MACOSX_BUNDLE TRUE
-#  MACOSX_FRAMEWORK_IDENTIFIER org.cmake.ExecutableTarget
-#  RESOURCE "${RESOURCE_FILES}"))
 
+add_custom_command(TARGET trustid-image-processing-ex-buildverifier POST_BUILD
+COMMAND ${CMAKE_COMMAND} -E copy_directory
+${CMAKE_SOURCE_DIR}/resources $<TARGET_FILE_DIR:trustid-image-processing-ex-buildverifier>/resources)
+
+add_custom_command(TARGET trustid-image-processing-ex-verifyface POST_BUILD
+COMMAND ${CMAKE_COMMAND} -E copy_directory
+${CMAKE_SOURCE_DIR}/resources $<TARGET_FILE_DIR:trustid-image-processing-ex-verifyface>/resources)
+
+add_custom_command(TARGET shape-pred-valid POST_BUILD
+COMMAND ${CMAKE_COMMAND} -E copy_directory
+${CMAKE_SOURCE_DIR}/resources $<TARGET_FILE_DIR:shape-pred-valid>/resources)
 
 #set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 #set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

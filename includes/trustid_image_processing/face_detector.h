@@ -108,6 +108,8 @@ namespace trustid
              */
             std::vector<FaceDetectionConfidenceBoundingBox> getBoundingBoxes(BoundingBoxHeuristicEnum heuristic = LARGEST_AREA) const;
 
+            std::vector<FaceDetectionResultEntry> getBoundingBoxEntries(BoundingBoxHeuristicEnum heuristic = LARGEST_AREA) const;
+
             FaceDetectionResultEntry getEntry(int detectionIdx = 0, BoundingBoxHeuristicEnum heuristic = LARGEST_AREA) const;
 
             FaceDetectionResult copy() const;
@@ -125,7 +127,7 @@ namespace trustid
         {
         public:
             IFaceDetectImageProcessor();
-            virtual cv::Mat processImage(const cv::Mat image) = 0;
+            virtual cv::Mat operator()(const cv::Mat image) = 0;
         };
 
         /**

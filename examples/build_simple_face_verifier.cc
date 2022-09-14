@@ -68,6 +68,33 @@ int main(int argc, char **argv)
     // Let's use the same images we used to create the model
     clientProcessor->loadFaceVerificationData(faceVerificatorConfig);
     
+    std::cout << "opening bald guys image" << std::endl;
+
+    // Load image via OpenCV (this is just an example, you can use any image loading method you want,
+    // ideally one that supports loading from memory since you'll want to retrieve images from the webcam)
+    cv::Mat img = cv::imread("bald_guys.jpg", cv::IMREAD_COLOR);
+    auto detectedFaces = clientProcessor->detectFaces(img);
+
+    // check if there's exactly one face on the image
+    if (detectedFaces.getResult() == trustid::image::ONE_RESULT)
+    {
+        // This currently returns the full image, but we can change this to crop it if needed
+        auto faceVerificationResult = clientProcessor->verifyUser(detectedFaces.getEntry());
+        std::cout << "Face verification result: " << faceVerificationResult.getMatchConfidence() << std::endl;
+    }
+    else if (detectedFaces.getResult() == trustid::image::MULTIPLE_RESULTS)
+    {
+        for (auto face : detectedFaces.getBoundingBoxEntries())
+        {
+            auto faceVerificationResult = clientProcessor->verifyUser(face);
+            std::cout << "Face verification result: " << faceVerificationResult.getMatchConfidence() << std::endl;
+        }
+    }
+    else
+    {
+        throw std::runtime_error("There should be at least one face on the image");
+    }
+    
     dlib::directory dir_test("test_images");
 
     for (auto &f : dir_test.get_files())

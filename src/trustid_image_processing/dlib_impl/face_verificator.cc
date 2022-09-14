@@ -4,9 +4,9 @@
 #include <dlib/dnn.h>
 #include <dlib/opencv.h>
 #include <istream>
-#include <dlib/gui_widgets.h>
 #include "trustid_image_processing/face_verificator.h"
 #include "trustid_image_processing/dlib_impl/face_verificator.h"
+#include "trustid_image_processing/utils.h"
 
 trustid::image::impl::DlibFaceChipExtractor::DlibFaceChipExtractor()
 {
@@ -14,7 +14,7 @@ trustid::image::impl::DlibFaceChipExtractor::DlibFaceChipExtractor()
     dlib::deserialize("resources/ERT68.dat") >> sp;
 }
 
-trustid::image::FaceDetectionResultEntry trustid::image::impl::DlibFaceChipExtractor::processImage(const FaceDetectionResultEntry detectionResultEntry)
+trustid::image::FaceDetectionResultEntry trustid::image::impl::DlibFaceChipExtractor::operator() (const FaceDetectionResultEntry detectionResultEntry)
 {
     // get the bounding box of the face
     auto detection = detectionResultEntry.getBoundingBox();
@@ -22,19 +22,18 @@ trustid::image::FaceDetectionResultEntry trustid::image::impl::DlibFaceChipExtra
 
     // convert it to dlib objects
     dlib::cv_image<dlib::bgr_pixel> dlibImage(image);
-    auto shape = sp(dlibImage, dlib::rectangle(detection.x, detection.y, detection.x + detection.width, detection.y + detection.height));
+    auto shape = sp(dlibImage, utils::openCVRectToDlib(detection));
 
     // extract the face chip
-    dlib::array2d<dlib::rgb_pixel> face_chip;
+    dlib::array2d<dlib::bgr_pixel> face_chip;
     dlib::extract_image_chip(dlibImage, dlib::get_face_chip_details(shape, 150, 0.25), face_chip);
-
-    dlib::image_window wnd(face_chip);
 
     // convert it back to OpenCV format
     cv::Mat face_chip_mat = dlib::toMat(face_chip);
-
+    dlib::matrix<dlib::rgb_pixel> matrix;
+    
     // return the new result
-    return FaceDetectionResultEntry(face_chip_mat, {FaceDetectionConfidenceBoundingBox{cv::Rect(0, 0, face_chip_mat.size().width, face_chip_mat.size().height), 1.0}});
+    return FaceDetectionResultEntry(face_chip_mat, FaceDetectionConfidenceBoundingBox{cv::Rect(0, 0, face_chip_mat.cols, face_chip_mat.rows), detectionResultEntry.getFaceDetBoundingBox().confidenceScore});
 }
 
 
@@ -47,21 +46,25 @@ trustid::image::impl::DlibFaceVerificator::DlibFaceVerificator(const std::vector
 
     // load the base network
     dlib::deserialize("resources/dlib_face_recognition_resnet_model_v1.dat") >> config.net;
-
+    
     // add the preprocessor to extract the face chips
-    //this->addPreprocessor(std::make_unique<DlibFaceChipExtractor>());
-    this->addPreprocessor(std::make_unique<ResizeImageProcessor>(150, 150));
+    this->addPreprocessor(std::make_unique<DlibFaceChipExtractor>());
+    //this->addPreprocessor(std::make_unique<ResizeImageProcessor>(150, 150));
+
     for (auto &chip : groundTruthChips)
     {
-        // Get the face embedding of the image to test
-        std::cout << "hello world " << std::endl;
-        cv::imshow("Display window", applyProcessors(chip).getCroppedImage());
-        int k = cv::waitKey(0); // Wait for a keystroke in the window
+        // Convert OpenCV image to dlib format
         dlib::matrix<dlib::rgb_pixel> matrix;
         dlib::assign_image(matrix, dlib::cv_image<dlib::bgr_pixel>(applyProcessors(chip).getCroppedImage()));
 
+        // Extract the face descriptor
+        auto groundTruthVec = config.net(matrix);  
+        //std::cout << "groundTruthVec" << std::endl;
+        //std::cout << groundTruthVec << std::endl<< std::endl;
+
         // calculate embedding add it to the ground truth vector list
-        config.groundTruthVecs.push_back(config.net(matrix));
+        config.groundTruthVecs.push_back(groundTruthVec);
+
     }
     std::cout << "Ground truth vector size: " << config.groundTruthVecs.size() << std::endl;
 }
@@ -80,15 +83,16 @@ trustid::image::FaceVerificationResult trustid::image::impl::DlibFaceVerificator
 {
     // Get the face embedding of the image to test
     dlib::matrix<dlib::rgb_pixel> matrix;
-    dlib::assign_image(matrix, dlib::cv_image<dlib::bgr_pixel>(applyProcessors(detectionResultEntry).getCroppedImage()));
+    dlib::assign_image(matrix, dlib::cv_image<dlib::bgr_pixel>(detectionResultEntry.getCroppedImage()));
+    
     auto testVec = config.net(matrix);
-
     // Calculate the distance to all ground truth vectors
     int count = 0;
     for (auto groundTruthVec : config.groundTruthVecs)
     {
         // Calculate the distance of
         auto distance = dlib::length(testVec - groundTruthVec);
+        std::cout << "distance: " << distance << std::endl;
         if (distance < config.distanceThreshold)
         {
             count++;

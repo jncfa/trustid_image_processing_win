@@ -24,7 +24,7 @@ int main(int argc, char **argv)
     auto clientProcessor = std::make_unique<trustid::image::ClientImageProcessor>(config);
 
     // Loading the test images    
-    dlib::directory dir_test("test_images");
+    dlib::directory dir_test("test_images.bk");
 
     for (auto &f : dir_test.get_files())
     {
