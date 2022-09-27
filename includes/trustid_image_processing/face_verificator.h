@@ -1,120 +1,126 @@
 #ifndef TRUSTID_FACE_VERIFICATOR_H_
 #define TRUSTID_FACE_VERIFICATOR_H_
 
-#include "face_detector.h"
 #include <opencv2/opencv.hpp>
-#include <vector>
 #include <utility>
+#include <vector>
 
-namespace trustid
-{
-    namespace image
-    {
-        /**
-         * Result of a given face verification operation.
-         */
-        enum FaceVerificationResultEnum
-        {
-            SAME_USER,
-            DIFFERENT_USER,
-            UNKNOWN
-        };
-        /**
-         * Stores information regarding a face verification operation.
-         */
-        class FaceVerificationResult
-        {
-        public:
-            FaceVerificationResult(FaceDetectionResultEntry detectionResultEntry, double matchConfidence, FaceVerificationResultEnum resultValue);
+#include "face_detector.h"
 
-            /**
-             * Returns the confidence score of the match of the given face image to a certain user.
-             */
-            double getMatchConfidence() const;
+namespace trustid {
+namespace image {
+/**
+ * Result of a given face verification operation.
+ */
+enum FaceVerificationResultEnum {
+  SAME_USER = 0,
+  DIFFERENT_USER = 1,
+  UNKNOWN = 2
+};
+/**
+ * Stores information regarding a face verification operation.
+ */
+class FaceVerificationResult {
+ public:
+  FaceVerificationResult(FaceDetectionResultEntry detectionResultEntry,
+                         double matchConfidence,
+                         FaceVerificationResultEnum resultValue);
 
-            /**
-             * Returns the result of the face verification operation.
-             */
-            FaceVerificationResultEnum getResult() const;
+  /**
+   * Returns the confidence score of the match of the given face image to a
+   * certain user.
+   */
+  double getMatchConfidence() const;
 
-            /**
-             * Returns the face detection result for the given face verification operation.
-             */
-            FaceDetectionResultEntry getDetectionResult() const;
+  /**
+   * Returns the result of the face verification operation.
+   */
+  FaceVerificationResultEnum getResult() const;
 
-        private:
-            double matchConfidence;
-            FaceVerificationResultEnum resultValue;
-            FaceDetectionResultEntry detectionResultEntry;
-        };
+  /**
+   * Returns the face detection result for the given face verification
+   * operation.
+   */
+  FaceDetectionResultEntry getDetectionResult() const;
 
-        /**
-         * Class to implement a processing pipeline for images.
-         */
-        class IFaceVerifyImageProcessor
-        {
-        public:
-            IFaceVerifyImageProcessor();
-            virtual FaceDetectionResultEntry operator() (const FaceDetectionResultEntry detectionResultEntry) = 0;
-        };
+ private:
+  double matchConfidence;
+  FaceVerificationResultEnum resultValue;
+  FaceDetectionResultEntry detectionResultEntry;
+};
 
-        /**
-         * Resizes input image to the specified size.
-         */
-        class ResizeImageProcessor : public IFaceVerifyImageProcessor
-        {
-        public:
-            ResizeImageProcessor(int width, int height);
-            virtual FaceDetectionResultEntry operator() (const FaceDetectionResultEntry detectionResultEntry);
+/**
+ * Class to implement a processing pipeline for images.
+ */
+class IFaceVerifyImageProcessor {
+ public:
+  IFaceVerifyImageProcessor();
+  virtual FaceDetectionResultEntry operator()(
+      const FaceDetectionResultEntry detectionResultEntry) = 0;
+};
 
-        private:
-            int width;
-            int height;
-        };
+/**
+ * Resizes input image to the specified size.
+ */
+class ResizeImageProcessor : public IFaceVerifyImageProcessor {
+ public:
+  ResizeImageProcessor(int width, int height);
+  virtual FaceDetectionResultEntry operator()(
+      const FaceDetectionResultEntry detectionResultEntry);
 
-        /**
-         * Class to implement a cropping mechanism for images.
-         */
-        class CropImageProcessor : public IFaceVerifyImageProcessor
-        {
-        public:
-            CropImageProcessor(cv::Rect cropInfo);
-            virtual FaceDetectionResultEntry operator() (const FaceDetectionResultEntry detectionResultEntry) override;
+ private:
+  int width;
+  int height;
+};
 
-        private:
-            cv::Rect cropInfo;
-        };
+/**
+ * Class to implement a cropping mechanism for images.
+ */
+class CropImageProcessor : public IFaceVerifyImageProcessor {
+ public:
+  CropImageProcessor(cv::Rect cropInfo);
+  virtual FaceDetectionResultEntry operator()(
+      const FaceDetectionResultEntry detectionResultEntry) override;
 
-        /**
-         * Detects faces in an image.
-         */
-        class IFaceVerificator
-        {
-        public:
-            IFaceVerificator();
-            IFaceVerificator(std::vector<std::unique_ptr<IFaceVerifyImageProcessor>> preprocessors);
+ private:
+  cv::Rect cropInfo;
+};
 
-            void addPreprocessor(std::unique_ptr<IFaceVerifyImageProcessor> preprocessor);
+/**
+ * Detects faces in an image.
+ */
+class IFaceVerificator {
+ public:
+  IFaceVerificator();
+  IFaceVerificator(
+      std::vector<std::unique_ptr<IFaceVerifyImageProcessor>> preprocessors);
 
-            void removePreprocessors();
+  void addPreprocessor(std::unique_ptr<IFaceVerifyImageProcessor> preprocessor);
 
-            /**
-             * Detects faces in an image.
-             */
-            FaceVerificationResult verifyUser(const FaceDetectionResultEntry detectionResultEntry);
+  void removePreprocessors();
 
-        protected:
-            FaceDetectionResultEntry applyProcessors(const FaceDetectionResultEntry detectionResultEntry);
+  /**
+   * Detects faces in an image.
+   */
+  FaceVerificationResult verifyUser(
+      const FaceDetectionResultEntry detectionResultEntry);
 
-        private:
-            /**
-             * Internal procedure for verifying a user.
-             * This is split up from the public verifyUser procedure to allow the implementation of pre and/or post-processing steps common to every face verification algorithm.
-             */
-            virtual FaceVerificationResult _verifyUser(const FaceDetectionResultEntry detectionResultEntry) = 0;
-            std::vector<std::unique_ptr<IFaceVerifyImageProcessor>> preprocessors;
-        };
-    }
-}
+ protected:
+  FaceDetectionResultEntry applyProcessors(
+      const FaceDetectionResultEntry detectionResultEntry);
 
-#endif // TRUSTID_FACE_VERIFICATOR_H_
+ private:
+  /**
+   * Internal procedure for verifying a user.
+   * This is split up from the public verifyUser procedure to allow the
+   * implementation of pre and/or post-processing steps common to every face
+   * verification algorithm.
+   */
+  virtual FaceVerificationResult _verifyUser(
+      const FaceDetectionResultEntry detectionResultEntry) = 0;
+  std::vector<std::unique_ptr<IFaceVerifyImageProcessor>> preprocessors;
+};
+}  // namespace image
+}  // namespace trustid
+
+#endif  // TRUSTID_FACE_VERIFICATOR_H_

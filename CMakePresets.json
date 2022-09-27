@@ -112,14 +112,14 @@
             "description": "",
             "displayName": "",
             "configurePreset": "x64-debug",
-            "configuration": "Debug"    
+            "configuration": "Debug"
         },
         {
             "name": "Release",
             "description": "",
             "displayName": "",
             "configurePreset": "x64-release",
-            "configuration": "Release"    
+            "configuration": "Release"
         }
     ]
 }
