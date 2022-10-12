@@ -14,15 +14,3 @@ cd build
 cmake ..
 cmake --build .
 ```
-
-
-## To-Do List
-### Must
-- TODO: Implement 
-
-### Should
-
-### Could
-- TODO: Add unit tests + code coverage 
-
-### Would
