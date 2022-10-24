@@ -26,14 +26,15 @@
                 "${workspaceFolder}/includes/**",
                 "${workspaceFolder}/depends/dlib/**"
             ],
+            "defines": [
+                "DLIB_NO_GUI_SUPPORT"
+            ],
             "compilerPath": "/usr/bin/g++",
             "cStandard": "c17",
             "cppStandard": "c++14",
             "intelliSenseMode": "linux-gcc-x64",
-            "configurationProvider": "ms-vscode.cmake-tools",
-            "compileCommands": "${workspaceFolder}/build/compile_commands.json",
+            "configurationProvider": "ms-vscode.cmake-tools"
         }
     ],
-    "version": 4,
-    
+    "version": 4    
 }

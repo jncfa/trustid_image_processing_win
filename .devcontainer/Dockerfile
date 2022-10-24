@@ -23,29 +23,20 @@ RUN if [ "${REINSTALL_CMAKE_VERSION_FROM_SOURCE}" != "none" ]; then \
 #     && apt-get -y install --no-install-recommends <your-package-list-here>
 
 # Install gRPC C++ dependencies
-RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends build-essential autoconf libtool pkg-config g++ wget unzip
+#RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+#    && apt-get -y install --no-install-recommends build-essential autoconf libtool pkg-config g++ wget unzip
 
-# Install minimal prerequisites (Ubuntu 18.04 as reference)
-RUN apt update && apt install -y cmake g++ wget unzip
-# Download and unpack sources
-wget -O opencv.zip https://github.com/opencv/opencv/archive/4.x.zip
-wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/4.x.zip
-unzip opencv.zip
-unzip opencv_contrib.zip
-
-RUN git clone -b 4.6.0 https://github.com/opencv/opencv.git
-RUN git clone -b 4.6.0 https://github.com/opencv/opencv_contrib.git
-# Create build directory and switch into it
-mkdir -p build && cd build
-# Configure
-cmake -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib-4.x/modules ../opencv-4.x
-# Build
-cmake --build .
+# Clone OpenCV (+ contrib repo)
+RUN git clone -b 4.6.0 --single-branch https://github.com/opencv/opencv.git \
+    && git clone -b 4.6.0 --single-branch https://github.com/opencv/opencv_contrib.git \
+    && mkdir opencvbuild && cd opencvbuild \
+    && cmake -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules -D CMAKE_BUILD_TYPE=RELEASE ../opencv 
+    && cmake --build . --config Release -- -j8 
+    && cmake --install .
 
 # Clone gRPC repo & subdependencies, build, and install
 RUN git clone -b v1.50.0 https://github.com/grpc/grpc && cd grpc \
     && git submodule update --init \
     && mkdir grpcbuild && cd grpcbuild \ 
-    && cmake .. -DgRPC_INSTALL=ON && cmake --build . --config Release -- -j5 \
-    && make install
+    && cmake .. -DgRPC_INSTALL=ON && cmake --build . --config Release -- -j8  \
+    && cmake --install .
