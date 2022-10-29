@@ -22,16 +22,15 @@ set(RESOURCE_FILES
 
 add_library(trustid-image-processing-lib STATIC ${source_list} ${RESOURCE_FILES})
 target_include_directories(trustid-image-processing-lib PUBLIC "includes" ${OpenCV_INCLUDE_DIRS})
-target_link_libraries(trustid-image-processing-lib PUBLIC dlib ${OpenCV_LIBS})
+target_link_libraries(trustid-image-processing-lib dlib ${OpenCV_LIBS})
 
-#add_executable(trustid-image-processing-ex-buildverifier "examples/build_simple_face_verifier.cc")
+add_executable(trustid-image-processing-ex-buildverifier "examples/build_simple_face_verifier.cc")
+target_include_directories(trustid-image-processing-ex-buildverifier PUBLIC "includes" ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(trustid-image-processing-ex-buildverifier PUBLIC dlib trustid-image-processing-lib ${OpenCV_LIBS})
+
 #add_executable(trustid-image-processing-ex-verifyface "examples/detect_and_verify_faces.cc")
-
 #target_include_directories(trustid-image-processing-ex-verifyface PUBLIC "includes" ${OpenCV_INCLUDE_DIRS})
 #target_link_libraries(trustid-image-processing-ex-verifyface PUBLIC dlib trustid-image-processing-lib ${OpenCV_LIBS})
-
-#target_include_directories(trustid-image-processing-ex-buildverifier PUBLIC "includes" ${OpenCV_INCLUDE_DIRS})
-#target_link_libraries(trustid-image-processing-ex-buildverifier PUBLIC dlib trustid-image-processing-lib ${OpenCV_LIBS})
 
 #add_executable(trustid-image-processing-ex-serialization-test "examples/serialization_test.cc")
 #target_include_directories(trustid-image-processing-ex-serialization-test PUBLIC "includes" ${OpenCV_INCLUDE_DIRS})

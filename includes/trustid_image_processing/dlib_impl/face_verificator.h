@@ -66,54 +66,70 @@ using ResNet34 = dlib::loss_metric<dlib::fc_no_bias<
 namespace trustid {
 namespace image {
 namespace impl {
+
 class DlibFaceChipExtractor : public IFaceVerifyImageProcessor {
  public:
-  DlibFaceChipExtractor(dlib::shape_predictor sp);
+  DlibFaceChipExtractor(std::shared_ptr<dlib::shape_predictor> sp);
   virtual FaceDetectionResultEntry operator()(
       const FaceDetectionResultEntry detectionResultEntry) override;
 
  private:
-  dlib::shape_predictor sp;
+  std::shared_ptr<dlib::shape_predictor> sp;
 };
 
-struct DlibFaceVerificatorConfig {
-  DlibFaceVerificatorConfig() {}
-  DlibFaceVerificatorConfig(
+struct DlibFaceVerificatorModelParams {
+  DlibFaceVerificatorModelParams() {}
+  DlibFaceVerificatorModelParams(
       const std::vector<dlib::matrix<float, 0, 1>> groundTruthVecs,
-      const ResNet34 net, const float distanceThreshold = 0.6,
-      const float votingThreshold = 0.5)
+      const float distanceThreshold = 0.6, const float votingThreshold = 0.5)
       : groundTruthVecs(groundTruthVecs),
-        net(net),
         distanceThreshold(distanceThreshold),
         votingThreshold(votingThreshold) {}
 
+  // user specific data
   std::vector<dlib::matrix<float, 0, 1>> groundTruthVecs;
-  ResNet34 net;
+
+  // generic model building info
   float distanceThreshold;
   float votingThreshold;
 
-  dlib::shape_predictor sp;
-
-  // TODO: Replace serialization for Grpc compatible method
-  DLIB_DEFINE_DEFAULT_SERIALIZATION(DlibFaceVerificatorConfig, groundTruthVecs,
-                                    net, distanceThreshold, votingThreshold,
-                                    sp);
+  DLIB_DEFINE_DEFAULT_SERIALIZATION(DlibFaceVerificatorModelParams,
+                                    groundTruthVecs, distanceThreshold,
+                                    votingThreshold);
 };
 
+// Class that implements face verification using a simple voting algorithm based on Euclidean distances between ResNet34 embeddings.
+//   
 class DlibFaceVerificator : public IFaceVerificator {
  public:
-  DlibFaceVerificator(
+  DlibFaceVerificator(const std::shared_ptr<ResNet34> net,
+      const std::shared_ptr<dlib::shape_predictor> sp,
       const std::vector<FaceDetectionResultEntry> groundTruthChips,
       const float distanceThreshold = 0.6, const float votingThreshold = 0.5);
-  DlibFaceVerificator(const DlibFaceVerificatorConfig config);
 
-  DlibFaceVerificatorConfig getConfig();
+  DlibFaceVerificator(const std::shared_ptr<ResNet34> net,
+                      const std::shared_ptr<dlib::shape_predictor> sp,
+                      const DlibFaceVerificatorModelParams userParams);
+
+  // Get the model parameters for the given user.
+  DlibFaceVerificatorModelParams getUserParams();
+
+  // Check if we can currently verify users or not based on if the model is
+  // loaded or not.
+  bool canVerifyUser();
 
  private:
   virtual FaceVerificationResult _verifyUser(
       const FaceDetectionResultEntry detectionResultEntry) override;
-  DlibFaceVerificatorConfig config;
+
+  DlibFaceVerificatorModelParams userParams;
+  std::shared_ptr<ResNet34> net;
 };
+
+// util functions for loading model objects into memory
+std::shared_ptr<dlib::shape_predictor> loadShapePredictorFromDisk(std::string pathToFile);
+std::shared_ptr<ResNet34> loadResNet34FromDisk(std::string pathToFile);
+
 }  // namespace impl
 }  // namespace image
 }  // namespace trustid

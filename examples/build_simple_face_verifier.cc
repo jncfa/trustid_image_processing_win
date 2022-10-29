@@ -2,40 +2,38 @@
  * @file build_simple_face_verifier.cc
  * @author jncfa (jose.faria@isr.uc.pt)
  * @brief Example of how to build a simple face verifier
- * @version 0.1
- * @date 2022-08-17
+ * @version 0.2
+ * @date 2022-10-26
  *
+ * Example of how to build a simple face verifier, demonstrating the difference in how the library exposes the models compared to the previous version.
  */
 
 #include <iostream>
 #include <memory>
 
-#include "trustid_image_processing/client/client_processor.h"
 #include "trustid_image_processing/dlib_impl/face_detector.h"
 #include "trustid_image_processing/dlib_impl/face_verificator.h"
-#include "trustid_image_processing/server/server_processor.h"
 
 int main(int argc, char **argv) {
-  std::cout << "face built" << std::endl;
+  std::cout << "Building face model using test images.." << std::endl;
+  //std::make_unique<impl::DlibFaceVerificator>
 
-  // Create a client processor (what will run on the client side)
-  // Note that, since we're not loading face verification data, attempting to
-  // use face verification methods ~ will result in a failure until you load it
-  // via the loadFaceVerificationData method.
-  auto clientProcessor =
-      std::make_unique<trustid::image::ClientImageProcessor>();
+  // load needed pre-trained models
+  auto net = trustid::image::impl::loadResNet34FromDisk("resources/dlib_face_recognition_resnet_model_v1.dat");
+  auto sp = trustid::image::impl::loadShapePredictorFromDisk("resources/ERT68.dat");
 
-  // Create a server processor (what will run on the server side)
-  auto serverProcessor =
-      std::make_unique<trustid::image::ServerImageProcessor>();
-
+  std::unique_ptr<trustid::image::IFaceDetector> faceDetector = std::make_unique<trustid::image::impl::DlibFaceDetector>();
+  
+  // The face verificator can't be built yet because we don't have the user model data
+  std::unique_ptr<trustid::image::impl::DlibFaceVerificator> faceVerificator(nullptr); 
+  
   // The server will create a face verification model based on the given ground
   // truth results These are the images of the user that will be used to create
   // the model
   std::vector<trustid::image::FaceDetectionResultEntry> facesDetected = {};
 
   // Open directory with images
-  dlib::directory dir("images");
+  dlib::directory dir("test_resources/person1");
   for (auto &f : dir.get_files()) {
     std::cout << f.full_name() << std::endl;
 
@@ -43,7 +41,7 @@ int main(int argc, char **argv) {
     // loading method you want, ideally one that supports loading from memory
     // since you'll want to retrieve images from the webcam)
     cv::Mat img = cv::imread(f.full_name(), cv::IMREAD_COLOR);
-    auto detectedFaces = clientProcessor->detectFaces(img);
+    auto detectedFaces = faceDetector->detectFaces(img);
 
     // check if there's exactly one face on the image
     if (detectedFaces.getResult() == trustid::image::ONE_RESULT) {
@@ -59,45 +57,19 @@ int main(int argc, char **argv) {
 
   // Create face verification model and get configuration to be sent to the
   // client
-  auto faceVerificator =
-      serverProcessor->createVerificationModel(facesDetected);
+  faceVerificator = std::make_unique<trustid::image::impl::DlibFaceVerificator>(net, sp, facesDetected);
   std::cout << "face built" << std::endl;
 
   // We would serialize and send this back to the client, but here we're just
   // passing the configuration to the client processor directly
-  auto faceVerificatorConfig = faceVerificator->getConfig();
+  auto faceVerificatorUserParams = faceVerificator->getUserParams();
 
   // Now we can use the face verificator to verify faces
   // Let's use the same images we used to create the model
-  clientProcessor->loadFaceVerificationData(faceVerificatorConfig);
+  
+  auto newFaceVerificator = std::make_unique<trustid::image::impl::DlibFaceVerificator>(net, sp, faceVerificatorUserParams);
 
-  std::cout << "opening bald guys image" << std::endl;
-
-  // Load image via OpenCV (this is just an example, you can use any image
-  // loading method you want, ideally one that supports loading from memory
-  // since you'll want to retrieve images from the webcam)
-  cv::Mat img = cv::imread("bald_guys.jpg", cv::IMREAD_COLOR);
-  auto detectedFaces = clientProcessor->detectFaces(img);
-
-  // check if there's exactly one face on the image
-  if (detectedFaces.getResult() == trustid::image::ONE_RESULT) {
-    // This currently returns the full image, but we can change this to crop it
-    // if needed
-    auto faceVerificationResult =
-        clientProcessor->verifyUser(detectedFaces.getEntry());
-    std::cout << "Face verification result: "
-              << faceVerificationResult.getMatchConfidence() << std::endl;
-  } else if (detectedFaces.getResult() == trustid::image::MULTIPLE_RESULTS) {
-    for (auto face : detectedFaces.getBoundingBoxEntries()) {
-      auto faceVerificationResult = clientProcessor->verifyUser(face);
-      std::cout << "Face verification result: "
-                << faceVerificationResult.getMatchConfidence() << std::endl;
-    }
-  } else {
-    throw std::runtime_error("There should be at least one face on the image");
-  }
-
-  dlib::directory dir_test("test_images");
+  dlib::directory dir_test("test_resources/person2");
 
   for (auto &f : dir_test.get_files()) {
     std::cout << f.full_name() << std::endl;
@@ -106,14 +78,14 @@ int main(int argc, char **argv) {
     // loading method you want, ideally one that supports loading from memory
     // since you'll want to retrieve images from the webcam)
     cv::Mat img = cv::imread(f.full_name(), cv::IMREAD_COLOR);
-    auto detectedFaces = clientProcessor->detectFaces(img);
+    auto detectedFaces = faceDetector->detectFaces(img);
 
     // check if there's exactly one face on the image
     if (detectedFaces.getResult() == trustid::image::ONE_RESULT) {
       // This currently returns the full image, but we can change this to crop
       // it if needed
       auto faceVerificationResult =
-          clientProcessor->verifyUser(detectedFaces.getEntry());
+          newFaceVerificator->verifyUser(detectedFaces.getEntry());
       std::cout << "Face verification result: "
                 << faceVerificationResult.getMatchConfidence() << std::endl;
     } else {
@@ -122,7 +94,7 @@ int main(int argc, char **argv) {
   }
 
   // Serialize the data and save it to a file
-  dlib::serialize("face_verificator.dat") << faceVerificatorConfig;
+  dlib::serialize("face_verificator.dat") << faceVerificatorUserParams;
 
   return 0;
 }

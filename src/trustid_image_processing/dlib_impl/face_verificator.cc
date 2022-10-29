@@ -12,7 +12,7 @@
 #include "trustid_image_processing/utils.h"
 
 trustid::image::impl::DlibFaceChipExtractor::DlibFaceChipExtractor(
-    dlib::shape_predictor sp)
+    std::shared_ptr<dlib::shape_predictor> sp)
     : sp(sp) {}
 
 trustid::image::FaceDetectionResultEntry
@@ -24,7 +24,7 @@ trustid::image::impl::DlibFaceChipExtractor::operator()(
 
   // convert it to dlib objects
   dlib::cv_image<dlib::bgr_pixel> dlibImage(image);
-  auto shape = sp(dlibImage, utils::openCVRectToDlib(detection));
+  auto shape = sp->operator()(dlibImage, utils::openCVRectToDlib(detection));
 
   // extract the face chip
   dlib::array2d<dlib::bgr_pixel> face_chip;
@@ -44,21 +44,20 @@ trustid::image::impl::DlibFaceChipExtractor::operator()(
 }
 
 trustid::image::impl::DlibFaceVerificator::DlibFaceVerificator(
+    const std::shared_ptr<ResNet34> net,
+    const std::shared_ptr<dlib::shape_predictor> sp,
     const std::vector<FaceDetectionResultEntry> groundTruthChips,
     const float distanceThreshold, const float votingThreshold) {
   // initialize config
-  config = DlibFaceVerificatorConfig();
-  config.distanceThreshold = distanceThreshold;
-  config.votingThreshold = votingThreshold;
+  this->userParams = DlibFaceVerificatorModelParams();
+  this->userParams.distanceThreshold = distanceThreshold;
+  this->userParams.votingThreshold = votingThreshold;
 
   // load the base network
-  dlib::deserialize("resources/dlib_face_recognition_resnet_model_v1.dat") >>
-      config.net;
+  this->net = net;
 
   // add the preprocessor to extract the face chips
-  dlib::deserialize("resources/ERT68.dat") >> config.sp;
-
-  this->addPreprocessor(std::make_unique<DlibFaceChipExtractor>(config.sp));
+  this->addPreprocessor(std::make_unique<DlibFaceChipExtractor>(sp));
 
   for (auto &chip : groundTruthChips) {
     // Convert OpenCV image to dlib format
@@ -67,24 +66,35 @@ trustid::image::impl::DlibFaceVerificator::DlibFaceVerificator(
                                    applyProcessors(chip).getCroppedImage()));
 
     // Extract the face descriptor
-    auto groundTruthVec = config.net(matrix);
+    auto groundTruthVec = this->net->operator()(matrix);
+
+    #ifndef NDEBUG
+      std::cout << "vec: " << groundTruthVec << std::endl;
+    #endif // DEBUG
+
 
     // calculate embedding add it to the ground truth vector list
-    config.groundTruthVecs.push_back(groundTruthVec);
+    this->userParams.groundTruthVecs.push_back(groundTruthVec);
   }
-  std::cout << "Ground truth vector size: " << config.groundTruthVecs.size()
-            << std::endl;
+
+#ifndef NDEBUG
+  std::cout << "Ground truth vector size: "
+            << this->userParams.groundTruthVecs.size() << std::endl;
+#endif // DEBUG
+
 }
 trustid::image::impl::DlibFaceVerificator::DlibFaceVerificator(
-    const DlibFaceVerificatorConfig config)
-    : config(config) {
+    const std::shared_ptr<ResNet34> net,
+    const std::shared_ptr<dlib::shape_predictor> sp,
+    const DlibFaceVerificatorModelParams userParams)
+    : userParams(userParams), net(net) {
   // add the preprocessor to extract the face chips
-  this->addPreprocessor(std::make_unique<DlibFaceChipExtractor>(config.sp));
+  this->addPreprocessor(std::make_unique<DlibFaceChipExtractor>(sp));
 }
 
-trustid::image::impl::DlibFaceVerificatorConfig
-trustid::image::impl::DlibFaceVerificator::getConfig() {
-  return config;
+trustid::image::impl::DlibFaceVerificatorModelParams
+trustid::image::impl::DlibFaceVerificator::getUserParams() {
+  return this->userParams;
 }
 
 trustid::image::FaceVerificationResult
@@ -95,24 +105,42 @@ trustid::image::impl::DlibFaceVerificator::_verifyUser(
   dlib::assign_image(matrix, dlib::cv_image<dlib::bgr_pixel>(
                                  detectionResultEntry.getCroppedImage()));
 
-  auto testVec = config.net(matrix);
+  auto testVec = this->net->operator()(matrix);
   // Calculate the distance to all ground truth vectors
   int count = 0;
-  for (auto groundTruthVec : config.groundTruthVecs) {
+  for (auto groundTruthVec : this->userParams.groundTruthVecs) {
     // Calculate the distance ofS
     auto distance = dlib::length(testVec - groundTruthVec);
-    // std::cout << "distance: " << distance << std::endl;
-    if (distance < config.distanceThreshold) {
+    //#ifndef NDEBUG
+    //std::cout << "distance: " << distance << std::endl;
+    //#endif // DEBUG
+    if (distance < this->userParams.distanceThreshold) {
       count++;
     }
   }
+
   // Calculate the voting percentage and determine if it's the real user based
   // on voting threshold
-  return FaceVerificationResult(
-      detectionResultEntry,
-      static_cast<float>(count) / config.groundTruthVecs.size(),
-      static_cast<float>(count) / config.groundTruthVecs.size() >
-              config.votingThreshold
-          ? SAME_USER
-          : DIFFERENT_USER);
+  auto votingConfidence =
+      static_cast<float>(count) / this->userParams.groundTruthVecs.size();
+  return FaceVerificationResult(detectionResultEntry, votingConfidence,
+                                votingConfidence > userParams.votingThreshold
+                                    ? SAME_USER
+                                    : DIFFERENT_USER);
+}
+
+std::shared_ptr<dlib::shape_predictor>
+trustid::image::impl::loadShapePredictorFromDisk(std::string pathToFile) {
+  auto sp = std::make_shared<dlib::shape_predictor>();
+  dlib::deserialize(pathToFile) >> (*sp);
+
+  return sp;
+}
+std::shared_ptr<ResNet34> trustid::image::impl::loadResNet34FromDisk(
+    std::string pathToFile) {
+
+  auto net = std::make_shared<ResNet34>();
+  dlib::deserialize(pathToFile) >> (*net);
+
+  return net;
 }

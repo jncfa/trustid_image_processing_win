@@ -22,9 +22,10 @@ RUN if [ "${REINSTALL_CMAKE_VERSION_FROM_SOURCE}" != "none" ]; then \
 # RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 #     && apt-get -y install --no-install-recommends <your-package-list-here>
 
-# Install gRPC C++ dependencies
-#RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-#    && apt-get -y install --no-install-recommends build-essential autoconf libtool pkg-config g++ wget unzip
+# Install gRPC & MKL C++ dependencies
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -y install --no-install-recommends build-essential autoconf libtool pkg-config g++ wget unzip libmkl-dev
+
 
 # Clone OpenCV (+ contrib repo)
 RUN git clone -b 4.6.0 --single-branch https://github.com/opencv/opencv.git \
@@ -32,11 +33,4 @@ RUN git clone -b 4.6.0 --single-branch https://github.com/opencv/opencv.git \
     && mkdir opencvbuild && cd opencvbuild \
     && cmake -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules -D CMAKE_BUILD_TYPE=RELEASE ../opencv 
     && cmake --build . --config Release -- -j8 
-    && cmake --install .
-
-# Clone gRPC repo & subdependencies, build, and install
-RUN git clone -b v1.50.0 https://github.com/grpc/grpc && cd grpc \
-    && git submodule update --init \
-    && mkdir grpcbuild && cd grpcbuild \ 
-    && cmake .. -DgRPC_INSTALL=ON && cmake --build . --config Release -- -j8  \
     && cmake --install .

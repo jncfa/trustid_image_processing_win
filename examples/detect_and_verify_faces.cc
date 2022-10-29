@@ -10,10 +10,8 @@
 #include <iostream>
 #include <memory>
 
-#include "trustid_image_processing/client/client_processor.h"
 #include "trustid_image_processing/dlib_impl/face_detector.h"
 #include "trustid_image_processing/dlib_impl/face_verificator.h"
-#include "trustid_image_processing/server/server_processor.h"
 
 int main(int argc, char **argv) {
   trustid::image::impl::DlibFaceVerificatorConfig config;

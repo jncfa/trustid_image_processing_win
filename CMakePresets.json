@@ -19,8 +19,8 @@
             }
         },
         {
-            "name": "x64-debug",
-            "displayName": "x64 Debug",
+            "name": "win10-debug",
+            "displayName": "Win10 Debug",
             "inherits": "windows-base",
             "architecture": {
                 "value": "x64",
@@ -31,29 +31,13 @@
             }
         },
         {
-            "name": "x64-release",
-            "displayName": "x64 Release",
-            "inherits": "x64-debug",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release"
-            }
-        },
-        {
-            "name": "x86-debug",
-            "displayName": "x86 Debug",
+            "name": "win10-release",
+            "displayName": "Win10 Release",
             "inherits": "windows-base",
             "architecture": {
-                "value": "x86",
+                "value": "x64",
                 "strategy": "external"
             },
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug"
-            }
-        },
-        {
-            "name": "x86-release",
-            "displayName": "x86 Release",
-            "inherits": "x86-debug",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
@@ -66,6 +50,26 @@
             "installDir": "${sourceDir}/out/install/${presetName}",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            },
+            "vendor": {
+                "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
+                    "sourceDir": "$env{HOME}/.vs/$ms{projectDirName}"
+                }
+            }
+        },
+        {
+            "name": "linux-release",
+            "displayName": "Linux Release",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "installDir": "${sourceDir}/out/install/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
             },
             "condition": {
                 "type": "equals",
@@ -109,17 +113,31 @@
     ],
     "buildPresets": [
         {
-            "name": "Debug",
+            "name": "Win10 Debug",
             "description": "",
             "displayName": "",
-            "configurePreset": "x64-debug",
+            "configurePreset": "win10-debug",
             "configuration": "Debug"
         },
         {
-            "name": "Release",
+            "name": "Win10 Release",
             "description": "",
             "displayName": "",
-            "configurePreset": "x64-release",
+            "configurePreset": "win10-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "Linux Debug",
+            "description": "",
+            "displayName": "",
+            "configurePreset": "linux-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "Linux Release",
+            "description": "",
+            "displayName": "",
+            "configurePreset": "linux-release",
             "configuration": "Release"
         }
     ]

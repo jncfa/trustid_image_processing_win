@@ -11,12 +11,16 @@
 #include <iostream>
 #include <memory>
 
-#include "trustid_image_processing/client/client_processor.h"
-#include "trustid_image_processing/dlib_impl/face_detector.h"
-#include "trustid_image_processing/dlib_impl/face_verificator.h"
-#include "trustid_image_processing/server/server_processor.h"
+//#include "trustid_image_processing/client/client_processor.h"
+//#include "trustid_image_processing/dlib_impl/face_detector.h"
+//#include "trustid_image_processing/dlib_impl/face_verificator.h"
+//#include "trustid_image_processing/server/server_processor.h"
 
 int main(int argc, char **argv) {
+  //dlib::deserialize("resources/dlib_face_recognition_resnet_model_v1.dat") >> *config.net;
+  //dlib::deserialize("resources/ERT68.dat") >> *config.sp;
+
+  
   // Create a client processor (what will run on the client side)
   // Note that, since we're not loading face verification data, attempting to
   // use face verification methods ~ will result in a failure until you load it
